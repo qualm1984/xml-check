@@ -21,8 +21,8 @@ else:
     ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")  # Text area for manual input
     kb_ids = ids_input.split(',')  # Split the input string into a list of KB IDs
 
-# Check if KB IDs are provided
-if kb_ids:
+# Check if KB IDs are provided and non-empty
+if kb_ids and any(id.strip() for id in kb_ids):
     # Make an HTTP request to get the sitemap URLs
     response = requests.get(url_prefix, headers=headers)  # HTTP GET request for the sitemap index
     sitemap_urls = []  # Initialize an empty list to store sitemap URLs
@@ -39,20 +39,26 @@ if kb_ids:
 
     # Iterate over each sitemap URL
     for sitemap_url in sitemap_urls:
-        response = requests.get(sitemap_url, headers=headers)  # HTTP GET request for each sitemap
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'xml')  # Parse the sitemap XML
-            urls = [element.text for element in soup.find_all('loc')]  # Extract URLs from the sitemap
-            st.write(f"{len(urls)} URLs found in {sitemap_url}")  # Display the number of URLs in the current sitemap
+            response = requests.get(sitemap_url, headers=headers)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'xml')
+                urls = [element.text for element in soup.find_all('loc')]
+
+                # Display the number of URLs in the current sitemap
+                st.write(f"{len(urls)} URLs found in {sitemap_url}")
 
             # Check each URL for the presence of KB IDs
             for kb_id in kb_ids:
-                found = any(url for url in urls if ('/s/article/'+kb_id+'/' in url) or ('/s/article/'+kb_id in url and url.endswith(kb_id)))
-                if found and not any(result for result in results if result[0] == kb_id):
-                    results.append((kb_id, "true", sitemap_url))  # Add the found KB ID to the results
-                    st.write(f"ID {kb_id} found: true in {sitemap_url}")  # Display that the KB ID was found
-        else:
-            st.write(f"Error {response.status_code} for sitemap {sitemap_url}")  # Display error if HTTP request for sitemap fails
+                    if kb_id.strip():  # Check if the KB ID is not just whitespace
+                        found = any(url for url in urls if ('/s/article/'+kb_id+'/' in url) or ('/s/article/'+kb_id in url and url.endswith(kb_id)))
+                        if found and not any(result for result in results if result[0] == kb_id):
+                            results.append((kb_id, "true", sitemap_url))
+                            st.write(f"ID {kb_id} found: true in {sitemap_url}")
+            else:
+                st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
+
+    else:
+        st.error(f"Error {response.status_code} for page {url_prefix}")
 
     # Commented out the redundant check for KB IDs
     # for kb_id in kb_ids:
