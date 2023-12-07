@@ -7,6 +7,15 @@ from io import StringIO
 # Streamlit app title
 st.title('VMware KB XML sitemap Checker')
 
+# File uploader and text input for KB IDs
+uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])
+if uploaded_file is not None:
+    kb_ids = [str(int(line.strip())) for line in uploaded_file]
+else:
+    ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
+    kb_ids = ids_input.split(',')
+
+
 # Define URL prefix and headers for HTTP requests
 url_prefix = "https://kb.vmware.com/km_sitemap_index"
 headers = {"VMW-Visitor-ID": "kbdev-J7Hm528k9"}
@@ -32,14 +41,6 @@ if response.status_code == 200:
             st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
 else:
     st.error(f"Error {response.status_code} for page {url_prefix}")
-
-# File uploader and text input for KB IDs
-uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])
-if uploaded_file is not None:
-    kb_ids = [str(int(line.strip())) for line in uploaded_file]
-else:
-    ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
-    kb_ids = ids_input.split(',')
 
 # Processing KB IDs
 if kb_ids and any(id.strip() for id in kb_ids):
