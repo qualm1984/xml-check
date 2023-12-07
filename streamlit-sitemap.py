@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -14,50 +13,33 @@ ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
 
 # Define a function to fetch and cache sitemap URLs
 @st.cache(show_spinner=False)
-def fetch_sitemap_urls(session, url_prefix):
-    response = session.get(url_prefix)
+def fetch_sitemap_urls(url_prefix, headers):
+    response = requests.get(url_prefix, headers=headers)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'xml')
         return [element.text for element in soup.find_all('loc')]
     else:
         raise Exception(f"Error {response.status_code} accessing sitemap index.")
-    
-def check_kb_id_in_sitemap(session, kb_id, sitemap_url):
-    response = session.get(sitemap_url)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'xml')
-        urls = [element.text for element in soup.find_all('loc')]
-        for url in urls:
-            if f"/s/article/{kb_id}" in url or (url.endswith(kb_id) and url[-len(kb_id) - 2] == '/'):
-                return kb_id, "true", sitemap_url, url
-    else:
-        raise Exception(f"Error {response.status_code} for sitemap {sitemap_url}")
-    return kb_id, "false", sitemap_url, None
 
-def find_kb_ids(kb_ids, sitemap_urls):
-    results = []
-    with requests.Session() as session:
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_kb_id = {executor.submit(check_kb_id_in_sitemap, session, kb_id, sitemap_url): kb_id for kb_id in kb_ids for sitemap_url in sitemap_urls}
-            for future in as_completed(future_to_kb_id):
-                kb_id = future_to_kb_id[future]
-                try:
-                    result = future.result()
-                    if result[1] == "true":  # Only add the result if true to avoid duplicates
-                        results.append(result)
-                        st.write(f"ID {result[0]} found: {result[1]} in {result[2]}")
-                except Exception as exc:
-                    st.error(f"KB ID check generated an exception: {exc}")
-    return results
-    
 # Define URL prefix and headers for HTTP requests
 url_prefix = "https://kb.vmware.com/km_sitemap_index"
 headers = {"VMW-Visitor-ID": "kbdev-J7Hm528k9"}
 
-# Fetch and display sitemap URLs
-sitemap_urls = fetch_sitemap_urls(url_prefix, headers)
-if sitemap_urls:
+# Attempt to fetch and display the sitemap URLs
+try:
+    sitemap_urls = fetch_sitemap_urls(url_prefix, headers)
     st.write(f"{len(sitemap_urls)} sitemaps found.")
+
+    for sitemap_url in sitemap_urls:
+        response = requests.get(sitemap_url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'xml')
+            urls = [element.text for element in soup.find_all('loc')]
+            st.write(f"{len(urls)} URLs found in {sitemap_url}")
+        else:
+            st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
+except Exception as e:
+    st.error(e)
 
 # Initialize KB IDs list
 kb_ids = []
@@ -70,8 +52,7 @@ elif ids_input:
 
 # Processing KB IDs
 if kb_ids and any(id.strip() for id in kb_ids):
-    # Perform the search for KB IDs within the sitemaps
-    results = find_kb_ids(kb_ids, sitemap_urls)
+    results = []
 
     # Check each KB ID across all sitemap URLs
     for kb_id in kb_ids:
