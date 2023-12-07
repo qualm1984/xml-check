@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import csv
 from io import StringIO
 
+st.set_page_config(theme={"base": "dark"})
+
 # Streamlit app title
 st.title('VMware KB XML Sitemap Checker')
 
