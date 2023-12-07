@@ -1,27 +1,47 @@
-import streamlit as st  # Import Streamlit for web app creation
-import requests  # Import requests to make HTTP requests
-from bs4 import BeautifulSoup  # Import BeautifulSoup for parsing HTML/XML
-import csv  # Import CSV for handling CSV file operations
-from io import StringIO  # Import StringIO to handle string-based file-like objects
+import streamlit as st
+import requests
+from bs4 import BeautifulSoup
+import csv
+from io import StringIO
 
 # Streamlit app title
-st.title('VMware KB XML sitemap Checker')  # Set the title of the Streamlit web app
+st.title('VMware KB XML sitemap Checker')
 
 # Define URL prefix and headers for HTTP requests
-url_prefix = "https://kb.vmware.com/km_sitemap_index"  # Base URL for the sitemap index
-headers = {"VMW-Visitor-ID": "kbdev-J7Hm528k9"}  # Custom headers for the HTTP request
+url_prefix = "https://kb.vmware.com/km_sitemap_index"
+headers = {"VMW-Visitor-ID": "kbdev-J7Hm528k9"}
+
+# Make an HTTP request to get the sitemap URLs
+response = requests.get(url_prefix, headers=headers)
+sitemap_urls = []
+
+# Check if the HTTP request was successful
+if response.status_code == 200:
+    soup = BeautifulSoup(response.text, 'xml')
+    sitemap_urls = [element.text for element in soup.find_all('loc')]
+    st.write(f"{len(sitemap_urls)} sitemaps found.")
+
+    # Displaying the number of URLs in each sitemap
+    for sitemap_url in sitemap_urls:
+        response = requests.get(sitemap_url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'xml')
+            urls = [element.text for element in soup.find_all('loc')]
+            st.write(f"{len(urls)} URLs found in {sitemap_url}")
+        else:
+            st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
+else:
+    st.error(f"Error {response.status_code} for page {url_prefix}")
 
 # File uploader and text input for KB IDs
-uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])  # File uploader widget
+uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])
 if uploaded_file is not None:
-    # If a file is uploaded, read KB IDs from the file
-    kb_ids = [str(int(line.strip())) for line in uploaded_file]  # Parse and store KB IDs from the file
+    kb_ids = [str(int(line.strip())) for line in uploaded_file]
 else:
-    # If no file is uploaded, use manual text input for KB IDs
-    ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")  # Text area for manual input
-    kb_ids = ids_input.split(',')  # Split the input string into a list of KB IDs
+    ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
+    kb_ids = ids_input.split(',')
 
-# Check if KB IDs are provided and non-empty
+# Processing KB IDs
 if kb_ids and any(id.strip() for id in kb_ids):
     # Make an HTTP request to get the sitemap URLs
     response = requests.get(url_prefix, headers=headers)
@@ -74,5 +94,3 @@ if kb_ids and any(id.strip() for id in kb_ids):
     else:
         # Report error only if the status code is not 200
         st.error(f"Error {response.status_code} for page {url_prefix}")
-
-# ...
