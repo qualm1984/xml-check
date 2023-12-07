@@ -24,21 +24,20 @@ else:
 # Check if KB IDs are provided and non-empty
 if kb_ids and any(id.strip() for id in kb_ids):
     # Make an HTTP request to get the sitemap URLs
-    response = requests.get(url_prefix, headers=headers)  # HTTP GET request for the sitemap index
-    sitemap_urls = []  # Initialize an empty list to store sitemap URLs
+    response = requests.get(url_prefix, headers=headers)
+    sitemap_urls = []
 
     # Check if the HTTP request was successful
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'xml')  # Parse the XML response
         sitemap_urls = [element.text for element in soup.find_all('loc')]  # Extract sitemap URLs from XML
         st.write(f"{len(sitemap_urls)} sitemaps found.")  # Display the number of sitemaps found
-    else:
-        st.write(f"Error {response.status_code} for page {url_prefix}")  # Display error if HTTP request fails
 
-    results = []  # Initialize an empty list to store the results
+        # Initialize an empty list to store the results
+        results = []  
 
-    # Iterate over each sitemap URL
-    for sitemap_url in sitemap_urls:
+        # Iterate over each sitemap URL
+        for sitemap_url in sitemap_urls:
             response = requests.get(sitemap_url, headers=headers)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'xml')
@@ -47,8 +46,8 @@ if kb_ids and any(id.strip() for id in kb_ids):
                 # Display the number of URLs in the current sitemap
                 st.write(f"{len(urls)} URLs found in {sitemap_url}")
 
-            # Check each URL for the presence of KB IDs
-            for kb_id in kb_ids:
+                # Check each URL for the presence of KB IDs
+                for kb_id in kb_ids:
                     if kb_id.strip():  # Check if the KB ID is not just whitespace
                         found = any(url for url in urls if ('/s/article/'+kb_id+'/' in url) or ('/s/article/'+kb_id in url and url.endswith(kb_id)))
                         if found and not any(result for result in results if result[0] == kb_id):
@@ -57,17 +56,23 @@ if kb_ids and any(id.strip() for id in kb_ids):
             else:
                 st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
 
+        # Create a CSV file in memory
+        csv_buffer = StringIO()  # Initialize a string buffer for the CSV file
+        writer = csv.writer(csv_buffer)  # Create a CSV writer object
+        writer.writerow(["KB id", "True/False", "Sitemap URL"])  # Write the header row to the CSV file
+        for result in results:
+            writer.writerow(result)  # Write each result to the CSV file
+
+        # Provide a download link for the CSV file
+        st.download_button(
+            label="Download Results as CSV",
+            data=csv_buffer.getvalue(),
+            file_name='results.csv',
+            mime='text/csv',
+        )  # Streamlit widget to download the CSV file
+
     else:
+        # Report error only if the status code is not 200
         st.error(f"Error {response.status_code} for page {url_prefix}")
 
-    # Commented out the redundant check for KB IDs
-    # for kb_id in kb_ids:
-    #     found = any(url for url in urls if ('/s/article/'+kb_id+'/' in url) or ('/s/article/'+kb_id in url and url.endswith(kb_id)))
-    #     if found:
-    #         results.append((kb_id, "true", sitemap_url))  # Append result if KB ID is found
-    #         st.write(f"ID {kb_id} found: true in {sitemap_url}")  # Display found message
-    #     else:
-    #         st.write(f"ID {kb_id} not found in {sitemap_url}")  # Display not found message
-
-    # Create a CSV file in memory
-    csv_buffer = StringIO()  # Initialize a string
+# ...
