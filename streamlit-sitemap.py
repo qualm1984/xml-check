@@ -7,6 +7,10 @@ from io import StringIO
 # Streamlit app title
 st.title('VMware KB XML Sitemap Checker')
 
+# File uploader and text input for KB IDs
+uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])
+ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
+
 # Define a function to fetch and cache sitemap URLs
 @st.cache(show_spinner=False)
 def fetch_sitemap_urls(url_prefix, headers):
@@ -38,8 +42,8 @@ except Exception as e:
     st.error(e)
 
 # File uploader and text input for KB IDs
-uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])
-ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
+#uploaded_file = st.file_uploader("Upload a file with KB article IDs", type=['txt'])
+#ids_input = st.text_area("Or enter KB article IDs manually (separate by comma)")
 
 # Initialize KB IDs list
 kb_ids = []
