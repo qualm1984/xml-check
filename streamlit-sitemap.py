@@ -54,39 +54,47 @@ if uploaded_file is not None:
 elif ids_input:
     kb_ids = ids_input.split(',')
 
+# ...
+
 # Processing KB IDs
 if kb_ids and any(id.strip() for id in kb_ids):
-    results = []  # Initialize the results list
+    results = []
 
-    # Iterate over each sitemap URL to gather all URLs in all sitemaps first
-    all_sitemap_urls = []
-    for sitemap_url in sitemap_urls:
-        response = requests.get(sitemap_url, headers=headers)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'xml')
-            all_sitemap_urls.extend([element.text for element in soup.find_all('loc')])
-        else:
-            st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
-
-    # Now check each KB ID against the gathered URLs
+    # Check each KB ID across all sitemap URLs
     for kb_id in kb_ids:
-        kb_id = kb_id.strip()
-        if kb_id:  # Proceed only if KB ID is not an empty string
-            # Check if the KB ID is found in any of the sitemap URLs
-            found = any(f'/s/article/{kb_id}' in url for url in all_sitemap_urls)
-            if found:
-                # Find the sitemap URL that contains the KB ID
-                sitemap_url_with_id = next((url for url in all_sitemap_urls if f'/s/article/{kb_id}' in url), "Not found")
-                results.append((kb_id, "true", sitemap_url_with_id))
-                st.write(f"ID {kb_id} found: true in {sitemap_url}")
-            else:
-                results.append((kb_id, "false", "Not found in any sitemap"))
-                st.write(f"ID {kb_id} not found in any sitemap")
+        kb_id = kb_id.strip()  # Remove any surrounding whitespace from the KB ID
+        if kb_id:
+            id_found = False  # Initialize the flag as False for each KB ID
+            for sitemap_url in sitemap_urls:
+                response = requests.get(sitemap_url, headers=headers)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'xml')
+                    urls = [element.text for element in soup.find_all('loc')]
+
+                    # Check if the current KB ID is found within the current sitemap
+                    for url in urls:
+                        if kb_id in url:
+                            id_found = True  # Set the flag to True since we found the ID
+                            # Extract the specific URL for the KB article
+                            kb_article_url = url
+                            results.append((kb_id, "true", sitemap_url, kb_article_url))
+                            st.write(f"ID {kb_id} found: true in {sitemap_url}")
+                            break  # Stop searching as we've found the ID
+                    if id_found:
+                        break  # Break again since we've found the ID and recorded the sitemap
+
+                else:
+                    st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
+
+            if not id_found:
+                # If the ID was not found in any sitemap, record with a "false" status
+                results.append((kb_id, "false", "Not found in any sitemap", "N/A"))
+                st.write(f"ID {kb_id} found: false in any sitemap")
 
     # Create a CSV file in memory
     csv_buffer = StringIO()
     writer = csv.writer(csv_buffer)
-    writer.writerow(["KB id", "True/False", "Sitemap URL"])
+    writer.writerow(["KB id", "True/False", "Sitemap URL", "KB Article URL"])
     for result in results:
         writer.writerow(result)
 
