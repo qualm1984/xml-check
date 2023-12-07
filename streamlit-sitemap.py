@@ -56,6 +56,8 @@ elif ids_input:
 
 # ...
 
+# ...
+
 # Processing KB IDs
 if kb_ids and any(id.strip() for id in kb_ids):
     results = []
@@ -73,9 +75,9 @@ if kb_ids and any(id.strip() for id in kb_ids):
 
                     # Check if the current KB ID is found within the current sitemap
                     for url in urls:
-                        if kb_id in url:
+                        # Check if the KB ID is a discrete segment in the URL
+                        if f"/s/article/{kb_id}" in url or (url.endswith(kb_id) and url[-len(kb_id) - 2] == '/'):
                             id_found = True  # Set the flag to True since we found the ID
-                            # Extract the specific URL for the KB article
                             kb_article_url = url
                             results.append((kb_id, "true", sitemap_url, kb_article_url))
                             st.write(f"ID {kb_id} found: true in {sitemap_url}")
@@ -89,7 +91,7 @@ if kb_ids and any(id.strip() for id in kb_ids):
             if not id_found:
                 # If the ID was not found in any sitemap, record with a "false" status
                 results.append((kb_id, "false", "Not found in any sitemap", "N/A"))
-                st.write(f"ID {kb_id} found: false in any sitemap")
+                st.write(f"ID {kb_id} not in any sitemap")
 
     # Create a CSV file in memory
     csv_buffer = StringIO()
