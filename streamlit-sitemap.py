@@ -65,15 +65,31 @@ if kb_ids and any(id.strip() for id in kb_ids):
             soup = BeautifulSoup(response.text, 'xml')
             urls = [element.text for element in soup.find_all('loc')]
 
-            # Check each URL for the presence of KB IDs
-            for kb_id in kb_ids:
-                if kb_id.strip():  # Check if the KB ID is not just whitespace
-                    found = any(url for url in urls if ('/s/article/'+kb_id+'/' in url) or ('/s/article/'+kb_id in url and url.endswith(kb_id)))
-                    if found and not any(result for result in results if result[0] == kb_id):
+            # Iterate over each KB ID to check if it is found within the sitemap URLs
+    for kb_id in kb_ids:
+        if kb_id.strip():  # Check if the KB ID is not just whitespace
+            id_found = False  # Initialize the flag as False for each KB ID
+            for sitemap_url in sitemap_urls:
+                response = requests.get(sitemap_url, headers=headers)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'xml')
+                    urls = [element.text for element in soup.find_all('loc')]
+
+                    # Check if the current KB ID is found within the current sitemap
+                    found = any('/s/article/'+kb_id+'/' in url for url in urls)
+                    if found:
                         results.append((kb_id, "true", sitemap_url))
                         st.write(f"ID {kb_id} found: true in {sitemap_url}")
-        else:
-            st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
+                        id_found = True
+                        break  # Stop checking if we've found the ID
+
+                else:
+                    st.error(f"Error {response.status_code} for sitemap {sitemap_url}")
+
+            if not id_found:
+                # If the ID was not found in any sitemap, record with a "false" status
+                results.append((kb_id, "false", "Not found in any sitemap"))
+                st.write(f"ID {kb_id} found: false in any sitemap")
 
     # Create a CSV file in memory
     csv_buffer = StringIO()
