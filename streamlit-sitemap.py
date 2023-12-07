@@ -78,7 +78,7 @@ if kb_ids and any(id.strip() for id in kb_ids):
                 # Find the sitemap URL that contains the KB ID
                 sitemap_url_with_id = next((url for url in all_sitemap_urls if f'/s/article/{kb_id}' in url), "Not found")
                 results.append((kb_id, "true", sitemap_url_with_id))
-                st.write(f"ID {kb_id} found: true in {sitemap_url_with_id}")
+                st.write(f"ID {kb_id} found: true in {sitemap_url}")
             else:
                 results.append((kb_id, "false", "Not found in any sitemap"))
                 st.write(f"ID {kb_id} not found in any sitemap")
