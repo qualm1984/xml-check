@@ -81,7 +81,7 @@ if kb_ids and any(id.strip() for id in kb_ids):
                 st.write(f"ID {kb_id} found: true in {sitemap_url_with_id}")
             else:
                 results.append((kb_id, "false", "Not found in any sitemap"))
-                st.write(f"ID {kb_id} found: false in any sitemap")
+                st.write(f"ID {kb_id} not found in any sitemap")
 
     # Create a CSV file in memory
     csv_buffer = StringIO()
